@@ -1,0 +1,72 @@
+
+購買定存
+設置一個定存的function，在這個function裡面輸入要存數多少的weiValue以及期數，設置require來判斷餘額是否大於weiValue，再判斷是否已經有定存合約，如果都符合要求就把銀行餘額扣除轉入定存，同時也輸入轉入的期數，最後產出定存這個事件(包含誰轉入、轉入多少、期數)
+*/
+
+
+
+ /* 購買定存 */
+    function CD(uint256 etherValue, uint256 period) public {
+        
+        uint256 weiValue = etherValue * 1 ether;
+
+        require(balance[msg.sender] >= weiValue, "your balances are not enough");
+        require(CDAmount[msg.sender] == 0, "Already have CD");
+        require(CDperiod[msg.sender] == 0, "Already have CD");
+
+
+        balance[msg.sender] -= weiValue;
+        CDAmount[msg.sender] += weiValue;
+        CDperiod[msg.sender] += period;
+
+        emit CDEvent(msg.sender, etherValue, period, now);
+    }
+/*
+定存期滿
+設置一個function紀錄定存結束，設置requireq判斷目前的定存金額是否大於0，期數是否大於0，利息的計算是本金*0.01*期數，之後定存的本金會加回原本的銀行餘額內，然後定存的金額和期數都會清空，最後輸出定存期滿的事件。
+*/
+    /* 定存期滿 */
+    function CDFinish() public {
+        require(CDAmount[msg.sender] > 0, "you don't have CD");
+        require(CDperiod[msg.sender] > 0, "you don't have CD");
+        
+        CDinterest[msg.sender] += CDAmount[msg.sender]/100*CDperiod[msg.sender];
+        balance[msg.sender] += CDAmount[msg.sender];
+        CDAmount[msg.sender] = 0;
+        CDperiod[msg.sender] = 0;
+
+        emit CDFinishEvent(msg.sender, now);
+    }
+/* 
+提前解約
+設置一個定存取消的function，設置一個require指令判斷定存的餘額、期數是否大於零，也判斷原先設定的期數是否大於要解約的期數，利息的計算也是本金*0.01*期數，解約後本金存入銀行餘額，並清空定存的金額與期數，最後輸出定存解約的事件。
+*/
+    /* 提前解約 */
+    function CDCancel(uint256 period) public {
+        require(CDAmount[msg.sender] > 0, "you don't have CD");
+        require(CDperiod[msg.sender] > 0, "you don't have CD");
+        require(CDperiod[msg.sender] > period, "CD period less than input value");
+        
+        CDinterest[msg.sender] += CDAmount[msg.sender]/100*period;
+        balance[msg.sender] += CDAmount[msg.sender];
+        CDAmount[msg.sender] = 0;
+        CDperiod[msg.sender] = 0;
+
+        emit CDCancelEvent(msg.sender, period, now);
+    }
+/*
+設定一些資訊，讓前端可以這些新增的變數是定存金額、定存期數、定存利息
+*/
+    /* getter */
+    
+    function getBankCDAmount() public view returns (uint256) {
+        return CDAmount[msg.sender];
+    }
+    
+    function getBankCDPeriod() public view returns (uint256) {
+        return CDperiod[msg.sender];
+    }
+    
+    function getBankCDInterest() public view returns (uint256) {
+        return CDinterest[msg.sender];
+    }
